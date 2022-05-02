@@ -59,6 +59,7 @@ elif ROBOT_TYPE == BIOLOID:
     USE_MM_OUTPUT = True
     Z_DIRECTION = -1
     LEG_ANGLES = [math.pi / 2, 0, 0, -math.pi / 2, math.pi, math.pi]
+
 elif ROBOT_TYPE == PHANTOMX_SIMULATION:
     constL1 = 0.054
     constL2 = 0.0645
