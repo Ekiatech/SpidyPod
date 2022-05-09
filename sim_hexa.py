@@ -165,7 +165,6 @@ while True:
             cross, T, to_pybullet_quaternion(0, 0, leg_angle)
         )
     elif args.mode == "robot-ik":
-        None
         # Use your own IK function
         for leg_id in range(1, 7):
             alphas = kinematics.computeIKOriented(

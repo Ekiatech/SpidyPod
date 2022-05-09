@@ -20,9 +20,10 @@ def computeDKDetailed(theta1, theta2, theta3, use_rads=True):
 
     # point C
     C = np.dot(rotation_matrixZ(theta1), np.dot(rotation_matrixY(theta2 + np.pi),
-               np.array([constL3 * np.cos(np.pi - theta3), 0, constL3 * np.sin(np.pi - theta3)]))) + B
+                                                np.array([constL3 * np.cos(np.pi - theta3), 0,
+                                                          constL3 * np.sin(np.pi - theta3)]))) + B
 
-    return O, A,  B, C
+    return O, A, B, C
 
 
 def computeIK(x, y, z, verbose=False, use_rads=True):
@@ -51,15 +52,19 @@ def rotaton_2D(x, y, z, leg_angle):
     return np.dot(rotation_matrixZ(leg_angle), np.array([x, y, z]))
 
 
-def computeIKOriented(theta1, theta2, theta3, leg_id, params, verbose=False):
-    return 0
+def computeIKOriented(x, y, z, leg_id, params, verbose=False):
+    res = np.array([x, y, z]) @ rotation_matrixZ(LEG_ANGLES[leg_id - 1])
+    return computeIK(*res)
+
 
 
 def rotation_matrixX(theta):
     return np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
 
+
 def rotation_matrixY(theta):
     return np.array([[np.cos(theta), 0, np.sin(theta)], [0, 1, 0], [-np.sin(theta), 0, np.cos(theta)]])
+
 
 def rotation_matrixZ(theta):
     return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
