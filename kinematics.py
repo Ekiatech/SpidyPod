@@ -63,3 +63,12 @@ def rotation_matrixY(theta):
 
 def rotation_matrixZ(theta):
     return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+
+def interpolate3D(values, t):
+    for i in range(len(values)-1):
+        if values[i][0] <= t <= values[i + 1][0]:
+            x = values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (values[i + 1][0] - values[i][0])
+            y = values[i][2] + (t - values[i][0]) * (values[i + 1][2] - values[i][2]) / (values[i + 1][0] - values[i][0])
+            z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (values[i + 1][0] - values[i][0])
+
+    return np.array([0, 0, 0])
