@@ -122,7 +122,9 @@ while True:
         for pt in points:
             # Drawing each step of the DK calculation
             i += 1
-            T.append(kinematics.rotaton_2D(pt[0], pt[1], pt[2], leg_angle))
+            temp = kinematics.rotaton_2D(pt[0], pt[1], pt[2], leg_angle)
+            T.append(temp)
+            print(T)
             T[-1][0] += leg_center_pos[0]
             T[-1][1] += leg_center_pos[1]
             T[-1][2] += leg_center_pos[2]
@@ -132,7 +134,7 @@ while True:
             )
 
         sim.setRobotPose(
-            leg_center_pos,
+            [0, 0, 0.5],
             to_pybullet_quaternion(0, 0, 0),
         )
         state = sim.setJoints(targets)

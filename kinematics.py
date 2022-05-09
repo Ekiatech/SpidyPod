@@ -7,22 +7,21 @@ def computeDK(theta1, theta2, theta3, use_rads=True):
 
 
 def computeDKDetailed(theta1, theta2, theta3, use_rads=True):
-    if use_rads == 0:
-        theta1 = theta1 * np.pi / 180
-        theta2 = theta2 * np.pi / 180
-        theta3 = theta3 * np.pi / 180
-    theta2 = theta2 - theta2Correction
-    theta3 = -theta3 - theta3Correction
+    theta1 = THETA1_MOTOR_SIGN * theta1
+    theta2 = THETA2_MOTOR_SIGN * theta2 - theta2Correction
+    theta3 = THETA3_MOTOR_SIGN * theta3 - theta3Correction
     O = np.array([[0], [0], [0]])
+    # point A
     A = np.array([constL1 * np.cos(theta1), constL1 * np.sin(theta1), 0])
-    B = np.dot(rotation_matrixZ(theta1), np.array([constL2 * np.cos(- theta2), 0, constL2 * np.sin(np.pi - theta2)])) + A
-    C = np.dot(rotation_matrixZ(theta1), np.dot(rotation_matrixY(theta2 + np.pi), np.array([constL3 * np.cos(np.pi - theta3), 0, constL3 * np.sin(np.pi - theta3)]))) + B
-    # xp = constL1 + math.cos(theta2) * constL2 + math.cos(theta2 + theta3) * constL3
-    # yp = math.sin(theta2) * constL2 + math.sin(theta2 + theta3) * constL3
 
-    # x = math.cos(theta1) * xp
-    # y = math.sin(theta1) * xp
-    # z = yp
+    # point B
+    B = np.dot(rotation_matrixZ(theta1),
+               np.array([constL2 * np.cos(- theta2), 0, constL2 * np.sin(- theta2)])) + A
+
+    # point C
+    C = np.dot(rotation_matrixZ(theta1), np.dot(rotation_matrixY(theta2 + np.pi),
+               np.array([constL3 * np.cos(np.pi - theta3), 0, constL3 * np.sin(np.pi - theta3)]))) + B
+
     return O, A,  B, C
 
 
