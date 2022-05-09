@@ -20,9 +20,16 @@ def computeDKDetailed(theta1, theta2, theta3, use_rads=True):
 
     # point C
     C = np.dot(rotation_matrixZ(theta1), np.dot(rotation_matrixY(theta2 + np.pi),
-               np.array([constL3 * np.cos(np.pi - theta3), 0, constL3 * np.sin(np.pi - theta3)]))) + B
+                                                np.array([constL3 * np.cos(np.pi - theta3), 0,
+                                                          constL3 * np.sin(np.pi - theta3)]))) + B
 
-    return O, A,  B, C
+    return O, A, B, C
+
+
+def alkashi(a, b, c, sign=-1):
+    if a == 0 or b == 0:
+        return 0
+    return sign * math.acos(min(1, max(-1, (a ** 2 + b ** 2 - c ** 2) / (2 * a * b))))
 
 
 def computeIK(x, y, z, verbose=False, use_rads=True):
@@ -31,19 +38,12 @@ def computeIK(x, y, z, verbose=False, use_rads=True):
     else:
         theta1 = np.arctan2(y, x)
     ax, ay = constL1 * np.cos(theta1), constL1 * np.sin(theta1)
-    ac = math.sqrt((x - ax) ** 2 + (y - ay) ** 2 + z ** 2)
-    temp = (constL2 ** 2 + ac ** 2 - constL3 ** 2) / (2 * ac * constL2)
-    if temp < -1:
-        temp = -1
-    if temp > 1:
-        temp = 1
-    theta2 = np.arccos(temp) - np.arcsin(z / ac) + theta2Correction
-    temp = (constL2 ** 2 + constL3 ** 2 - ac ** 2) / (2 * constL2 * constL3)
-    if temp < -1:
-        temp = -1
-    if temp > 1:
-        temp = 1
-    theta3 = np.pi - np.arccos(temp) - theta3Correction
+
+    xp = math.sqrt(x ** 2 + y ** 2) - constL1
+    d = math.sqrt(xp ** 2 + z ** 2)
+
+    theta2 = (alkashi(d, constL2, constL3) - Z_DIRECTION * np.arctan2(z, xp) + theta2Correction ) * THETA2_MOTOR_SIGN
+    theta3 = (np.pi + alkashi(constL2, constL3, d) + theta3Correction) * THETA3_MOTOR_SIGN
     return [theta1, theta2, theta3]
 
 
@@ -51,42 +51,43 @@ def rotaton_2D(x, y, z, leg_angle):
     return np.dot(rotation_matrixZ(leg_angle), np.array([x, y, z]))
 
 
-def computeIKOriented(theta1, theta2, theta3, leg_id, params, verbose=False):
-    return 0
+def computeIKOriented(x, y, z, leg_id, params, verbose=False):
+    res = np.array([x, y, z]) @ rotation_matrixZ(LEG_ANGLES[leg_id - 1]) + (params.initLeg[leg_id - 1] + [params.z])
+    return computeIK(*res)
 
 
 def rotation_matrixX(theta):
     return np.array([[1, 0, 0], [0, np.cos(theta), -np.sin(theta)], [0, np.sin(theta), np.cos(theta)]])
 
+
 def rotation_matrixY(theta):
     return np.array([[np.cos(theta), 0, np.sin(theta)], [0, 1, 0], [-np.sin(theta), 0, np.cos(theta)]])
+
 
 def rotation_matrixZ(theta):
     return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
 
 
 def legs(allLegs):
-    
-    targets = [[0,0,0] for i in range(6)]
+    targets = [[0, 0, 0] for i in range(6)]
     theta = 0
     for i in range(6):
         leg = allLegs[i]
         theta = LEG_ANGLES[i]
-        leg= leg @ rotation_matrixZ(theta)
+        leg = leg @ rotation_matrixZ(theta)
         targets[i][0], targets[i][1], targets[i][2] = computeIK(leg[0], leg[1], leg[2])
-    return targets   
-    
+    return targets
 
-    
-    
 
-    
 def interpolate3D(values, t):
-    for i in range(len(values)-1):
+    for i in range(len(values) - 1):
         if values[i][0] <= t <= values[i + 1][0]:
-            x = values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (values[i + 1][0] - values[i][0])
-            y = values[i][2] + (t - values[i][0]) * (values[i + 1][2] - values[i][2]) / (values[i + 1][0] - values[i][0])
-            z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (values[i + 1][0] - values[i][0])
+            x = values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
+                    values[i + 1][0] - values[i][0])
+            y = values[i][2] + (t - values[i][0]) * (values[i + 1][2] - values[i][2]) / (
+                    values[i + 1][0] - values[i][0])
+            z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (
+                    values[i + 1][0] - values[i][0])
 
     return np.array([0, 0, 0])
 
