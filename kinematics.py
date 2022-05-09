@@ -89,3 +89,50 @@ def interpolate3D(values, t):
             z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (values[i + 1][0] - values[i][0])
 
     return np.array([0, 0, 0])
+
+
+def walk(t, speed_x, speed_y, speed_rotation):
+    targets = [0] * 12
+    dist = 0.1
+    allLegs = np.array([[0.0,0.0,0.0] for i in range(6)])
+    if t < 1:
+        return legs(allLegs[0], allLegs[1], allLegs[2], allLegs[3])
+    for i in range(6):
+        v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
+            (0.25, np.array([allLegs[i][0] + 0.2*speed_x, allLegs[i][1]+0.2*speed_y,
+                            allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
+            (0.5, np.array([allLegs[i][0] + 0.4*speed_x, allLegs[i][1]+0.4*speed_y, allLegs[i][2]])),
+            (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+        if i % 2 == 0:
+            time = t % 1
+        else:
+            time = (t + 0.5) % 1
+
+        #print(time)
+        x, y, z = interpolate(v, time)
+        print(x,y,z)
+        allLegs[i][0], allLegs[i][1], allLegs[i][2] = x, y, z
+        #print(allLegs[i])
+    #print(allLegs)
+    angles = legs(allLegs)
+    return angles
+
+def interpolate(values, t):
+    """
+    Interpolate the values at time t.
+
+    :param values: a list of values
+    :param t: a time
+    :return: the interpolated value
+    """
+    for i in range(len(values) - 1):
+        if values[i][0] <= t <= values[i + 1][0]:
+            
+            return values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
+                    values[i + 1][0] - values[i][0])
+    if len(values) == 1:
+        return 0
+    else:
+        return np.array([0, 0, 0])
+    
+
