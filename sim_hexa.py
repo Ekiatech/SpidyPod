@@ -165,7 +165,7 @@ while True:
             cross, T, to_pybullet_quaternion(0, 0, leg_angle)
         )
     elif args.mode == "robot-ik":
-        """        
+
         # Use your own IK function
         for leg_id in range(1, 7):
             alphas = kinematics.computeIKOriented(
@@ -177,13 +177,5 @@ while True:
                 verbose=True,
             )
             set_leg_angles(alphas, leg_id, targets, params)
-        state = sim.setJoints(targets)
-    """
-
-        allLegs = [[0,0,0] for i in range(6)]
-
-        angles = kinematics.legs(allLegs)
-        for leg_id in range(1, 7):
-            set_leg_angles(angles[leg_id-1], leg_id, targets, params)
         state = sim.setJoints(targets)
     sim.tick()
