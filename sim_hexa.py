@@ -84,18 +84,19 @@ if args.mode == "frozen-direct":
     for i in range(4):
         crosses.append(p.loadURDF("target2/robot.urdf"))
     for name in sim.getJoints():
-        print(name)
+        # print(name)
         if "c1" in name or "thigh" in name or "tibia" in name:
             controls[name] = p.addUserDebugParameter(name, -math.pi, math.pi, 0)
 elif args.mode == "direct":
     for name in sim.getJoints():
-        print(name)
+        # print(name)
         if "c1" in name or "thigh" in name or "tibia" in name:
             controls[name] = p.addUserDebugParameter(name, -math.pi, math.pi, 0)
 elif args.mode == "inverse":
     cross = p.loadURDF("target2/robot.urdf")
     # Use your own DK function
     alphas = kinematics.computeDK(0, 0, 0, use_rads=True)
+    print(alphas)
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
     controls["target_z"] = p.addUserDebugParameter("target_z", -0.4, 0.4, alphas[2])
@@ -153,7 +154,6 @@ while True:
         state = sim.setJoints(targets)
         # Temp
         sim.setRobotPose([0, 0, 0.5], [0, 0, 0, 1])
-
         T = kinematics.rotaton_2D(x, y, z, leg_angle)
         T[0] += leg_center_pos[0]
         T[1] += leg_center_pos[1]
