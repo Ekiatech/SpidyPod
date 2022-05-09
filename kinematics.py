@@ -64,3 +64,21 @@ def rotation_matrixY(theta):
 
 def rotation_matrixZ(theta):
     return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+
+
+def legs(allLegs):
+    
+    targets = [[0,0,0] for i in range(6)]
+    theta = 0
+    for i in range(6):
+        leg = allLegs[i]
+        theta = LEG_ANGLES[i]
+        leg= leg @ rotation_matrixZ(theta)
+        targets[i][0], targets[i][1], targets[i][2] = computeIK(leg[0], leg[1], leg[2])
+    return targets   
+    
+
+    
+    
+
+    
