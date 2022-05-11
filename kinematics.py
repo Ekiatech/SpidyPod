@@ -39,11 +39,10 @@ def computeIK(x, y, z, verbose=False, use_rads=True):
         theta1 = np.arctan2(y, x)
     ax, ay = constL1 * np.cos(theta1), constL1 * np.sin(theta1)
 
-    xp = math.sqrt(x ** 2 + y ** 2) - constL1
-    d = math.sqrt(xp ** 2 + z ** 2)
-
-    theta2 = (alkashi(d, constL2, constL3) - Z_DIRECTION * np.arctan2(z, xp) + theta2Correction ) * THETA2_MOTOR_SIGN
-    theta3 = (np.pi + alkashi(constL2, constL3, d) + theta3Correction) * THETA3_MOTOR_SIGN
+    ac = math.sqrt((x - ax) ** 2 + (y - ay) ** 2 + z ** 2)
+    theta2 = (alkashi(ac, constL2, constL3) - Z_DIRECTION * np.arcsin(z / ac) + theta2Correction) * THETA2_MOTOR_SIGN
+    theta3 = (np.pi + alkashi(constL2, constL3, ac) + theta3Correction) * THETA3_MOTOR_SIGN
+    print([theta1, theta2, theta3], ac, alkashi(constL2, constL3, ac))
     return [theta1, theta2, theta3]
 
 
@@ -52,7 +51,7 @@ def rotaton_2D(x, y, z, leg_angle):
 
 
 def computeIKOriented(x, y, z, leg_id, params, verbose=False):
-    res = np.array([x, y, z]) @ rotation_matrixZ(LEG_ANGLES[leg_id - 1]) + (params.initLeg[leg_id - 1] + [params.z])
+    res = rotation_matrixZ(LEG_ANGLES[leg_id - 1]) @ np.array([x, y, z]) + (params.initLeg[leg_id - 1] + [params.z])
     return computeIK(*res)
 
 
@@ -104,7 +103,7 @@ def walk(t, speed_x, speed_y, speed_rotation):
                             allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
             (0.5, np.array([allLegs[i][0] + 0.4*speed_x, allLegs[i][1]+0.4*speed_y, allLegs[i][2]])),
             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
-        if i % 2 == 0:
+        if i==1 or i==4 or i==6:
             time = t % 1
         else:
             time = (t + 0.5) % 1

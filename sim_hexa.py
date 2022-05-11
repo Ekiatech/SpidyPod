@@ -179,8 +179,8 @@ while True:
             )
             set_leg_angles(alphas, leg_id, targets, params)
         state = sim.setJoints(targets)
-    """
-        n=2
+
+        """n=2
         diameter = 0.005
         x = math.cos(2*math.pi*time.time()/n)
         y = math.sin(2*math.pi*time.time()/n)
@@ -190,15 +190,16 @@ while True:
         angles = kinematics.legs(allLegs)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id-1], leg_id, targets, params)
-        state = sim.setJoints(targets)
-"""
+        state = sim.setJoints(targets)"""
+        
 
     elif args.mode == "walk":
         #print(time.time())
-        angles = kinematics.walk(time.time(), 1, 0, 0)
+        angles = kinematics.walk(time.time(), 0.5, 0, 0)
         #print(angles)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id-1], leg_id, targets, params)
         state = sim.setJoints(targets)
         
     sim.tick()
+    
