@@ -100,6 +100,10 @@ elif args.mode == "inverse":
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
     controls["target_z"] = p.addUserDebugParameter("target_z", -0.4, 0.4, alphas[2])
+elif args.mode == "robot-ik-keyboard":
+    x_body, y_body, z_body = 0, 0, params.z
+    max_value = 0.05
+    value = 0.001
 
 
 while True:
@@ -176,6 +180,35 @@ while True:
                 params,
                 verbose=True,
             )
+            set_leg_angles(alphas, leg_id, targets, params)
+        state = sim.setJoints(targets)
+    elif args.mode == "robot-ik-keyboard":
+        keys = p.getKeyboardEvents()
+        if 122 in keys:
+            x_body = min(x_body + value, max_value)
+        if 115 in keys:
+            x_body = max(x_body - value, - max_value)
+
+        if 113 in keys:
+            y_body = min(y_body + value, max_value)
+        if 100 in keys:
+            y_body = max(y_body - value, - max_value)
+
+        if 101 in keys:
+            z_body = min(z_body + value, params.z + max_value)
+        if 97 in keys:
+            z_body = max(z_body - value, params.z - max_value)
+
+        for leg_id in range(1, 7):
+            alphas = kinematics.computeIKOriented(
+                x_body,
+                y_body,
+                z_body,
+                leg_id,
+                params,
+                verbose=False,
+            )
+
             set_leg_angles(alphas, leg_id, targets, params)
         state = sim.setJoints(targets)
     sim.tick()
