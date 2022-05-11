@@ -58,8 +58,22 @@ def main():
         # setPositionToRobot(0, 0, 0, robot, params)
         robot.smooth_tick_read_and_write(3, verbose=False)
         print("Init position reached")
+        while(1):
+            #CODE TO PUT (set goal position)
+            t1 = time.time()
+            for k, v in robot.legs.items():
+            # Setting 0 s the goal position for each motor (such sadness! When we could be using the glorious inverse kinematics!)
+                v[0].goal_position = math.sin(time.time()) * 10
+                v[1].goal_position = math.sin(time.time()) * 10
+                v[2].goal_position = math.sin(time.time()) * 10
+            print(t1 - time.time())
+            #time.sleep(1)
+            robot.tick_read_and_write()
+
+
         time.sleep(2)
         print("Closing")
+        
     except Exception as e:
         track = traceback.format_exc()
         print(track)
