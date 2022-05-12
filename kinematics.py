@@ -97,7 +97,7 @@ def walk(t, speed_x, speed_y, speed_rotation):
     allLegs = np.array([[0.0,0.0,0.0] for i in range(6)])
     if t < 1:
         return legs(allLegs[0], allLegs[1], allLegs[2], allLegs[3])
-    for i in range(6):
+    for i in range(4):
         v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
             (0.25, np.array([allLegs[i][0] + 0.2*speed_x, allLegs[i][1]+0.2*speed_y,
                             allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
