@@ -42,7 +42,7 @@ def computeIK(x, y, z, verbose=False, use_rads=True):
     ac = math.sqrt((x - ax) ** 2 + (y - ay) ** 2 + z ** 2)
     theta2 = (alkashi(ac, constL2, constL3) - Z_DIRECTION * np.arcsin(z / ac) + theta2Correction) * THETA2_MOTOR_SIGN
     theta3 = (np.pi + alkashi(constL2, constL3, ac) + theta3Correction) * THETA3_MOTOR_SIGN
-    print([theta1, theta2, theta3], ac, alkashi(constL2, constL3, ac))
+    # print([theta1, theta2, theta3], ac, alkashi(constL2, constL3, ac))
     return [theta1, theta2, theta3]
 
 
@@ -78,44 +78,75 @@ def legs(allLegs):
     return targets
 
 
-def interpolate3D(values, t):
-    for i in range(len(values) - 1):
-        if values[i][0] <= t <= values[i + 1][0]:
-            x = values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
-                    values[i + 1][0] - values[i][0])
-            y = values[i][2] + (t - values[i][0]) * (values[i + 1][2] - values[i][2]) / (
-                    values[i + 1][0] - values[i][0])
-            z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (
-                    values[i + 1][0] - values[i][0])
-
-    return np.array([0, 0, 0])
-
-
 def walk(t, speed_x, speed_y, speed_rotation):
     targets = [0] * 12
     dist = 0.1
-    allLegs = np.array([[0.0,0.0,0.0] for i in range(6)])
+    allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
     if t < 1:
         return legs(allLegs[0], allLegs[1], allLegs[2], allLegs[3])
     for i in range(4):
         v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
-            (0.25, np.array([allLegs[i][0] + 0.2*speed_x, allLegs[i][1]+0.2*speed_y,
-                            allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
-            (0.5, np.array([allLegs[i][0] + 0.4*speed_x, allLegs[i][1]+0.4*speed_y, allLegs[i][2]])),
-            (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
-        if i==1 or i==4 or i==6:
+             (0.25, np.array([allLegs[i][0] + 0.2 * speed_x, allLegs[i][1] + 0.2 * speed_y,
+                              allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
+             (0.5, np.array([allLegs[i][0] + 0.4 * speed_x, allLegs[i][1] + 0.4 * speed_y, allLegs[i][2]])),
+             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+        if i == 1 or i == 4 or i == 6:
             time = t % 1
         else:
             time = (t + 0.5) % 1
 
-        #print(time)
+        # print(time)
         x, y, z = interpolate(v, time)
-        print(x,y,z)
+        # print(x, y, z)
         allLegs[i][0], allLegs[i][1], allLegs[i][2] = x, y, z
-        #print(allLegs[i])
-    #print(allLegs)
+        # print(allLegs[i])
+    # print(allLegs)
     angles = legs(allLegs)
     return angles
+
+
+def walk_guigui(t, speed_x, speed_y, speed_rotation, params):
+    allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
+    res = []
+    if t < 1:
+        return legs(allLegs)
+    for i in range(6):
+        v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
+             (0.25, np.array([allLegs[i][0] + 0.2 * speed_x, allLegs[i][1] + 0.2 * speed_y,
+                              allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
+             (0.5, np.array([allLegs[i][0] + 0.4 * speed_x, allLegs[i][1] + 0.4 * speed_y, allLegs[i][2]])),
+             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+        if i == 1 or i == 3 or i == 5:
+            time = t % 1
+        else:
+            time = (t + 0.5) % 1
+        x, y, z = interpolate(v, time)
+        alphas = computeIKOriented(x, y, z, i + 1, params)
+        res += [alphas]
+    return res
+
+
+def rotate(t, omega, params, direction=1):
+    allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
+    res = []
+    if t < 1:
+        return legs(allLegs)
+    for i in range(6):
+        rot = rotaton_2D(allLegs[i][0], allLegs[i][1], allLegs[i][2], omega * direction)
+        v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
+             (0.25, np.array([(allLegs[i][0] + rot[0]) / 2, (allLegs[i][1] + rot[1]) / 2, 
+                              allLegs[i][2] + 0.2 * omega])),
+             (0.5, np.array([rot[1], rot[1], allLegs[i][2]])),
+             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+        if i == 0 or i == 2 or i == 4:
+            time = t % 1
+        else:
+            time = (t + 0.5) % 1
+        x, y, z = interpolate(v, time)
+        alphas = computeIKOriented(x, y, z, i + 1, params)
+        res += [alphas]
+    return res
+
 
 def interpolate(values, t):
     """
@@ -127,12 +158,21 @@ def interpolate(values, t):
     """
     for i in range(len(values) - 1):
         if values[i][0] <= t <= values[i + 1][0]:
-            
             return values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
                     values[i + 1][0] - values[i][0])
     if len(values) == 1:
         return 0
     else:
         return np.array([0, 0, 0])
-    
 
+def interpolate3D(values, t):
+    for i in range(len(values) - 1):
+        if values[i][0] <= t <= values[i + 1][0]:
+            x = values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
+                    values[i + 1][0] - values[i][0])
+            y = values[i][2] + (t - values[i][0]) * (values[i + 1][2] - values[i][2]) / (
+                    values[i + 1][0] - values[i][0])
+            z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (
+                    values[i + 1][0] - values[i][0])
+
+    return np.array([0, 0, 0])

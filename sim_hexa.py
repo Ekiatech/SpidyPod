@@ -7,7 +7,6 @@ import argparse
 import pybullet as p
 from onshape_to_robot.simulation import Simulation
 
-
 import kinematics
 from constants import *
 
@@ -17,8 +16,8 @@ from scipy.spatial.transform import Rotation
 
 class Parameters:
     def __init__(
-        self,
-        z=-0.06,
+            self,
+            z=-0.06,
     ):
         self.z = z
         # Angle between the X axis of the leg and the X axis of the robot for each leg
@@ -79,7 +78,6 @@ leg_center_pos = [0.1248, -0.06164, 0.001116 + 0.5]
 leg_angle = -math.pi / 4
 params = Parameters()
 
-
 if args.mode == "frozen-direct":
     crosses = []
     for i in range(4):
@@ -97,7 +95,7 @@ elif args.mode == "inverse":
     cross = p.loadURDF("target2/robot.urdf")
     # Use your own DK function
     alphas = kinematics.computeDK(0, 0, 0, use_rads=True)
-    print(alphas)
+    # print(alphas)
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
     controls["target_z"] = p.addUserDebugParameter("target_z", -0.4, 0.4, alphas[2])
@@ -105,7 +103,6 @@ elif args.mode == "robot-ik-keyboard":
     x_body, y_body, z_body = 0, 0, params.z
     max_value = 0.05
     value = 0.001
-
 
 while True:
     targets = {}
@@ -129,7 +126,7 @@ while True:
             i += 1
             temp = kinematics.rotaton_2D(pt[0], pt[1], pt[2], leg_angle)
             T.append(temp)
-            print(T)
+            # print(T)
             T[-1][0] += leg_center_pos[0]
             T[-1][1] += leg_center_pos[1]
             T[-1][2] += leg_center_pos[2]
@@ -195,16 +192,31 @@ while True:
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id-1], leg_id, targets, params)
         state = sim.setJoints(targets)"""
-        
 
     elif args.mode == "walk":
-        #print(time.time())
+        # print(time.time())
         angles = kinematics.walk(time.time(), 0.5, 0, 0)
-        #print(angles)
+        # print(angles)
         for leg_id in range(1, 7):
-            set_leg_angles(angles[leg_id-1], leg_id, targets, params)
+            set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
         state = sim.setJoints(targets)
-        
+
+    elif args.mode == "walk_gui":
+        # print(time.time())
+        angles = kinematics.walk_guigui(time.time(), 0.2, 0, 0, params)
+        # print(angles)
+        for leg_id in range(1, 7):
+            set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
+        state = sim.setJoints(targets)
+
+    elif args.mode == "rotate":
+        # print(time.time())
+        angles = kinematics.rotate(time.time(), 5, params, 1)
+        # print(angles)
+        for leg_id in range(1, 7):
+            set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
+        state = sim.setJoints(targets)
+
     elif args.mode == "robot-ik-keyboard":
         keys = p.getKeyboardEvents()
         if 122 in keys:
@@ -235,4 +247,4 @@ while True:
             set_leg_angles(alphas, leg_id, targets, params)
         state = sim.setJoints(targets)
     sim.tick()
-    
+    time.sleep(0.001)
