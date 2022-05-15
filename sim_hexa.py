@@ -103,6 +103,20 @@ elif args.mode == "robot-ik-keyboard":
     x_body, y_body, z_body = 0, 0, params.z
     max_value = 0.05
     value = 0.001
+elif args.mode == "walk":
+    speed_x, speed_y = 0, 0
+    controls["speed_x"] = p.addUserDebugParameter("speed_x", -0.4, 0.4, speed_x)
+    controls["speed_y"] = p.addUserDebugParameter("speed_y", -0.4, 0.4, speed_y)
+elif args.mode == "rotate":
+    omega = 0
+    controls["omega"] = p.addUserDebugParameter("omega", -0.2, 0.2, omega)
+
+elif args.mode == "holonomic":
+    speed_x, speed_y = 0, 0
+    omega = 0
+    controls["speed_x"] = p.addUserDebugParameter("speed_x", -0.4, 0.4, speed_x)
+    controls["speed_y"] = p.addUserDebugParameter("speed_y", -0.4, 0.4, speed_y)
+    controls["omega"] = p.addUserDebugParameter("omega", -0.2, 0.2, omega)
 
 while True:
     targets = {}
@@ -212,16 +226,44 @@ while True:
         state = sim.setJoints(targets)
 
     elif args.mode == "walk":
+        speed_x = p.readUserDebugParameter(controls["speed_x"])
+        speed_y = p.readUserDebugParameter(controls["speed_y"])
         # print(time.time())
-        angles = kinematics.walk_guigui(time.time(), 0.2, 0, 0, params)
+        angles = kinematics.walk_guigui(time.time(), speed_x, speed_y, 0, params)
         # print(angles)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
         state = sim.setJoints(targets)
 
     elif args.mode == "rotate":
+        omega = p.readUserDebugParameter(controls["omega"])
+        if omega < 0:
+            direction = -1
+        else:
+            direction = 1
         # print(time.time())
-        angles = kinematics.rotate(time.time(), 5, params, 1)
+        angles = kinematics.rotate(time.time(), omega, params, direction)
+        # print(angles)
+        for leg_id in range(1, 7):
+            set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
+        state = sim.setJoints(targets)
+        # time.sleep(0.1)
+
+    elif args.mode == "holonomic":
+        speed_x = p.readUserDebugParameter(controls["speed_x"])
+        speed_y = p.readUserDebugParameter(controls["speed_y"])
+        omega = p.readUserDebugParameter(controls["omega"])
+        if omega < 0:
+            direction = -1
+        else:
+            direction = 1
+
+        # print(time.time())
+        angles = kinematics.holonomic(time.time(), speed_x, speed_y, omega, direction, params)
+        # print(angles)
+        for leg_id in range(1, 7):
+            set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
+        state = sim.setJoints(targets)
         # print(angles)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id - 1], leg_id, targets, params)

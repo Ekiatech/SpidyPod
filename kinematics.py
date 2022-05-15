@@ -47,7 +47,6 @@ def modulo_angle(angle):
 
 
 def computeIK(x, y, z, verbose=False, use_rads=True):
-
     if USE_MM_INPUT:
         x = x * 1000
         y = y * 1000
@@ -72,7 +71,7 @@ def computeIK(x, y, z, verbose=False, use_rads=True):
     theta2 = modulo_angle(theta2)
     theta3 = modulo_angle(theta3)
 
-    print("theta1: ", theta1, "theta2: ", theta2, "theta3: ", theta3)
+    # print("theta1: ", theta1, "theta2: ", theta2, "theta3: ", theta3)
     return [theta1, theta2, theta3]
 
 
@@ -82,7 +81,7 @@ def rotaton_2D(x, y, z, leg_angle):
 
 def computeIKOriented(x, y, z, leg_id, params, verbose=False):
     res = rotation_matrixZ(LEG_ANGLES[leg_id - 1]) @ np.array([x, y, z]) + (params.initLeg[leg_id - 1] + [params.z])
-    print("res: ", res)
+    # print("res: ", res)
     return computeIK(*res)
 
 
@@ -138,17 +137,64 @@ def rotate(t, omega, params, direction=1):
     if t < 1:
         return legs(allLegs)
     for i in range(6):
-        rot = rotaton_2D(allLegs[i][0], allLegs[i][1], allLegs[i][2], omega * direction)
-        v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
-             (0.25, np.array([(allLegs[i][0] + rot[0]) / 2, (allLegs[i][1] + rot[1]) / 2,
-                              allLegs[i][2] + 0.2 * omega])),
-             (0.5, np.array([rot[1], rot[1], allLegs[i][2]])),
-             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+
+        angles = computeIKOriented(0, 0, 0, i + 1, params)
+        # print("angles :", angles)
+        O, A, B, C = computeDKDetailed(angles[0], angles[1], angles[2])
+        # print("x, y, z :", C)
+        rot = rotaton_2D(*C, omega * direction)
+        # print("rot : ", *rot)
+        rot = rot - C + [0.01/0.2 * omega * direction, 0.2/0.2 * omega * direction, 0] @ rotation_matrixZ(LEG_ANGLES[i])
+        # print("rot good ref :", *rot)
+        v = [(0, np.array([0, 0, 0])),
+             (0.25, np.array([rot[0] / 2, rot[1] / 2,
+                              rot[2] + 0.5 * omega])),
+             (0.5, np.array([rot[0], rot[1], 0])),
+             (1, np.array([0, 0, 0]))]
         if i == 0 or i == 2 or i == 4:
             time = t % 1
         else:
             time = (t + 0.5) % 1
         x, y, z = interpolate(v, time)
+        alphas = computeIKOriented(x, y, z, i + 1, params)
+        res += [alphas]
+    return res
+
+
+def holonomic(t, speed_x, speed_y, omega, direction, params):
+    allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
+    res = []
+    if t < 1:
+        return legs(allLegs)
+    for i in range(6):
+
+        angles = computeIKOriented(0, 0, 0, i + 1, params)
+        # print("angles :", angles)
+        O, A, B, C = computeDKDetailed(angles[0], angles[1], angles[2])
+        # print("x, y, z :", C)
+        rot = rotaton_2D(*C, omega * direction)
+        # print("rot : ", *rot)
+        rot = rot - C + [0.01 / 0.2 * omega * direction, 0.2 / 0.2 * omega * direction, 0] @ rotation_matrixZ(
+            LEG_ANGLES[i])
+        # print("rot good ref :", *rot)
+        v1 = [(0, np.array([0, 0, 0])),
+             (0.25, np.array([rot[0] / 2, rot[1] / 2,
+                              rot[2] + 0.5 * omega])),
+             (0.5, np.array([rot[0], rot[1], 0])),
+             (1, np.array([0, 0, 0]))]
+
+        v2 = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
+             (0.25, np.array([allLegs[i][0] + 0.2 * speed_x, allLegs[i][1] + 0.2 * speed_y,
+                              allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
+             (0.5, np.array([allLegs[i][0] + 0.4 * speed_x, allLegs[i][1] + 0.4 * speed_y, allLegs[i][2]])),
+             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+        if i == 1 or i == 3 or i == 5:
+            time = t % 1
+        else:
+            time = (t + 0.5) % 1
+        x1, y1, z1 = interpolate(v1, time)
+        x2, y2, z2 = interpolate(v2, time)
+        x, y, z = (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2
         alphas = computeIKOriented(x, y, z, i + 1, params)
         res += [alphas]
     return res
