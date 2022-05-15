@@ -32,7 +32,27 @@ def alkashi(a, b, c, sign=-1):
     return sign * math.acos(min(1, max(-1, (a ** 2 + b ** 2 - c ** 2) / (2 * a * b))))
 
 
+def modulo_angle(angle):
+    if USE_RADS_INPUT:
+        borne = math.pi
+    else:
+        borne = 180
+
+    if -borne < angle < borne:
+        return angle
+    angle = angle % (borne * 2)
+    if angle > borne:
+        return -borne * 2 + angle
+    return angle
+
+
 def computeIK(x, y, z, verbose=False, use_rads=True):
+
+    if USE_MM_INPUT:
+        x = x * 1000
+        y = y * 1000
+        z = z * 1000
+
     if y == 0 or x == 0:
         theta1 = 0
     else:
@@ -42,7 +62,17 @@ def computeIK(x, y, z, verbose=False, use_rads=True):
     ac = math.sqrt((x - ax) ** 2 + (y - ay) ** 2 + z ** 2)
     theta2 = (alkashi(ac, constL2, constL3) - Z_DIRECTION * np.arcsin(z / ac) + theta2Correction) * THETA2_MOTOR_SIGN
     theta3 = (np.pi + alkashi(constL2, constL3, ac) + theta3Correction) * THETA3_MOTOR_SIGN
-    # print([theta1, theta2, theta3], ac, alkashi(constL2, constL3, ac))
+
+    if not USE_RADS_INPUT:
+        theta1 = math.degrees(theta1)
+        theta2 = math.degrees(theta2)
+        theta3 = math.degrees(theta3)
+
+    theta1 = modulo_angle(theta1)
+    theta2 = modulo_angle(theta2)
+    theta3 = modulo_angle(theta3)
+
+    print("theta1: ", theta1, "theta2: ", theta2, "theta3: ", theta3)
     return [theta1, theta2, theta3]
 
 
@@ -52,6 +82,7 @@ def rotaton_2D(x, y, z, leg_angle):
 
 def computeIKOriented(x, y, z, leg_id, params, verbose=False):
     res = rotation_matrixZ(LEG_ANGLES[leg_id - 1]) @ np.array([x, y, z]) + (params.initLeg[leg_id - 1] + [params.z])
+    print("res: ", res)
     return computeIK(*res)
 
 
@@ -78,33 +109,6 @@ def legs(allLegs):
     return targets
 
 
-def walk(t, speed_x, speed_y, speed_rotation):
-    targets = [0] * 12
-    dist = 0.1
-    allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
-    if t < 1:
-        return legs(allLegs[0], allLegs[1], allLegs[2], allLegs[3])
-    for i in range(4):
-        v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
-             (0.25, np.array([allLegs[i][0] + 0.2 * speed_x, allLegs[i][1] + 0.2 * speed_y,
-                              allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
-             (0.5, np.array([allLegs[i][0] + 0.4 * speed_x, allLegs[i][1] + 0.4 * speed_y, allLegs[i][2]])),
-             (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
-        if i == 1 or i == 4 or i == 6:
-            time = t % 1
-        else:
-            time = (t + 0.5) % 1
-
-        # print(time)
-        x, y, z = interpolate(v, time)
-        # print(x, y, z)
-        allLegs[i][0], allLegs[i][1], allLegs[i][2] = x, y, z
-        # print(allLegs[i])
-    # print(allLegs)
-    angles = legs(allLegs)
-    return angles
-
-
 def walk_guigui(t, speed_x, speed_y, speed_rotation, params):
     allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
     res = []
@@ -121,7 +125,9 @@ def walk_guigui(t, speed_x, speed_y, speed_rotation, params):
         else:
             time = (t + 0.5) % 1
         x, y, z = interpolate(v, time)
+        print(x, y, z)
         alphas = computeIKOriented(x, y, z, i + 1, params)
+        # alphas = [math.degrees(alpha) for alpha in alphas]
         res += [alphas]
     return res
 
@@ -134,7 +140,7 @@ def rotate(t, omega, params, direction=1):
     for i in range(6):
         rot = rotaton_2D(allLegs[i][0], allLegs[i][1], allLegs[i][2], omega * direction)
         v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
-             (0.25, np.array([(allLegs[i][0] + rot[0]) / 2, (allLegs[i][1] + rot[1]) / 2, 
+             (0.25, np.array([(allLegs[i][0] + rot[0]) / 2, (allLegs[i][1] + rot[1]) / 2,
                               allLegs[i][2] + 0.2 * omega])),
              (0.5, np.array([rot[1], rot[1], allLegs[i][2]])),
              (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
@@ -164,6 +170,7 @@ def interpolate(values, t):
         return 0
     else:
         return np.array([0, 0, 0])
+
 
 def interpolate3D(values, t):
     for i in range(len(values) - 1):

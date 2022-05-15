@@ -42,6 +42,7 @@ if ROBOT_TYPE == PHANTOMX:
         -3 * math.pi / 4,
         -math.pi / 2,
     ]
+
 elif ROBOT_TYPE == BIOLOID:
     constL1 = 0.001 * 51
     constL2 = 0.001 * 63.7

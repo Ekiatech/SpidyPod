@@ -17,7 +17,7 @@ from scipy.spatial.transform import Rotation
 class Parameters:
     def __init__(
             self,
-            z=-0.06,
+            z=-0.12,
     ):
         self.z = z
         # Angle between the X axis of the leg and the X axis of the robot for each leg
@@ -193,15 +193,25 @@ while True:
             set_leg_angles(angles[leg_id-1], leg_id, targets, params)
         state = sim.setJoints(targets)"""
 
-    elif args.mode == "walk":
+    elif args.mode == "walk_key":
+        speed_x, speed_y= 0, 0
+        keys = p.getKeyboardEvents()
+        if 122 in keys:
+            speed_x = 0.2
+        if 115 in keys:
+            speed_x = -0.2
+        if 113 in keys:
+            speed_y = 0.2
+        if 100 in keys:
+            speed_y = -0.2
         # print(time.time())
-        angles = kinematics.walk(time.time(), 0.5, 0, 0)
+        angles = kinematics.walk_guigui(time.time(), speed_x, speed_y, 0, params)
         # print(angles)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
         state = sim.setJoints(targets)
 
-    elif args.mode == "walk_gui":
+    elif args.mode == "walk":
         # print(time.time())
         angles = kinematics.walk_guigui(time.time(), 0.2, 0, 0, params)
         # print(angles)
