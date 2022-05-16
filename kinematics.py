@@ -2,11 +2,19 @@ import numpy as np
 from constants import *
 
 
-def computeDK(theta1, theta2, theta3, use_rads=True):
-    return computeDKDetailed(theta1, theta2, theta3, use_rads)[0]
+def computeDK(theta1, theta2, theta3):
+    """ Compute the direct kinematics of the end point of one leg of the robot."""
+    return computeDKDetailed(theta1, theta2, theta3)[0]
 
 
-def computeDKDetailed(theta1, theta2, theta3, use_rads=True):
+def computeDKDetailed(theta1, theta2, theta3):
+    """
+    Compute the direct kinematics of 3 points of one leg of the robot.
+    :param theta1: Angle of the first joint of the leg.
+    :param theta2: Angle of the second joint of the leg.
+    :param theta3: Angle of the third joint of the leg.
+    :return: array of positions
+    """
     theta1 = THETA1_MOTOR_SIGN * theta1
     theta2 = THETA2_MOTOR_SIGN * theta2 - theta2Correction
     theta3 = THETA3_MOTOR_SIGN * theta3 - theta3Correction
@@ -27,12 +35,14 @@ def computeDKDetailed(theta1, theta2, theta3, use_rads=True):
 
 
 def alkashi(a, b, c, sign=-1):
+    """ Compute AlKashi angle from 3 sides taking the sign into account. """
     if a == 0 or b == 0:
         return 0
     return sign * math.acos(min(1, max(-1, (a ** 2 + b ** 2 - c ** 2) / (2 * a * b))))
 
 
 def modulo_angle(angle):
+    """ Return the angle in the range [-pi, pi] or [-180, 180] depending on constant.py USE_RADS_INPUT."""
     if USE_RADS_INPUT:
         borne = math.pi
     else:
@@ -46,7 +56,8 @@ def modulo_angle(angle):
     return angle
 
 
-def computeIK(x, y, z, verbose=False, use_rads=True):
+def computeIK(x, y, z):
+    """ Compute the inverse kinematics of the first leg of the robot. """
     if USE_MM_INPUT:
         x = x * 1000
         y = y * 1000
@@ -75,11 +86,13 @@ def computeIK(x, y, z, verbose=False, use_rads=True):
     return [theta1, theta2, theta3]
 
 
-def rotaton_2D(x, y, z, leg_angle):
-    return np.dot(rotation_matrixZ(leg_angle), np.array([x, y, z]))
+def rotaton_2D(x, y, z, angle):
+    """ Rotate a point about a z axe rotation of angle. """
+    return np.dot(rotation_matrixZ(angle), np.array([x, y, z]))
 
 
-def computeIKOriented(x, y, z, leg_id, params, verbose=False):
+def computeIKOriented(x, y, z, leg_id, params):
+    """ Compute the inverse kinematics of the asked leg of the robot. """
     res = rotation_matrixZ(LEG_ANGLES[leg_id - 1]) @ np.array([x, y, z]) + (params.initLeg[leg_id - 1] + [params.z])
     # print("res: ", res)
     return computeIK(*res)
@@ -97,22 +110,30 @@ def rotation_matrixZ(theta):
     return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
 
 
-def legs(allLegs):
-    targets = [[0, 0, 0] for i in range(6)]
-    theta = 0
-    for i in range(6):
-        leg = allLegs[i]
-        theta = LEG_ANGLES[i]
-        leg = leg @ rotation_matrixZ(theta)
-        targets[i][0], targets[i][1], targets[i][2] = computeIK(leg[0], leg[1], leg[2])
-    return targets
+def interpolate(values, t):
+    """
+    Interpolate the values at time t.
+    :param values: a list of values
+    :param t: a time
+    :return: the interpolated value
+    """
+    for i in range(len(values) - 1):
+        if values[i][0] <= t <= values[i + 1][0]:
+            return values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
+                    values[i + 1][0] - values[i][0])
+    if len(values) == 1:
+        return 0
+    else:
+        return np.array([0, 0, 0])
 
 
-def walk_guigui(t, speed_x, speed_y, speed_rotation, params):
+def walk(t, speed_x, speed_y, params):
+    """
+    Hexapode translation walk.
+    :return: The 18 motors angles asked at the time t.
+    """
     allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
     res = []
-    if t < 1:
-        return legs(allLegs)
     for i in range(6):
         v = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
              (0.25, np.array([allLegs[i][0] + 0.2 * speed_x, allLegs[i][1] + 0.2 * speed_y,
@@ -132,42 +153,54 @@ def walk_guigui(t, speed_x, speed_y, speed_rotation, params):
 
 
 def rotate(t, omega, params, direction=1):
+    """
+    Hexapode rotation around itself.
+    :return: the 18 motors angles asked at the time t.
+    """
     allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
     res = []
-    if t < 1:
-        return legs(allLegs)
     for i in range(6):
 
+        # Passage du référentiel du bout de la patte à celui du début de la patte pour calculer le point cible
         angles = computeIKOriented(0, 0, 0, i + 1, params)
-        # print("angles :", angles)
         O, A, B, C = computeDKDetailed(angles[0], angles[1], angles[2])
-        # print("x, y, z :", C)
         rot = rotaton_2D(*C, omega * direction)
-        # print("rot : ", *rot)
+
+        # Retour au bon référentiel + correction dû au fait que la rotation est centrée sur la patte et non sur le robot
         rot = rot - C + [0.01/0.2 * omega * direction, 0.2/0.2 * omega * direction, 0] @ rotation_matrixZ(LEG_ANGLES[i])
-        # print("rot good ref :", *rot)
+
+        # Calcul de la position cible
         v = [(0, np.array([0, 0, 0])),
              (0.25, np.array([rot[0] / 2, rot[1] / 2,
                               rot[2] + 0.5 * omega])),
              (0.5, np.array([rot[0], rot[1], 0])),
              (1, np.array([0, 0, 0]))]
+
+        # Séparation des 6 patte en 2 groupes de 3
         if i == 0 or i == 2 or i == 4:
             time = t % 1
         else:
             time = (t + 0.5) % 1
+
+        # Interpolation
         x, y, z = interpolate(v, time)
+
+        # Cinématique inverse orienté
         alphas = computeIKOriented(x, y, z, i + 1, params)
         res += [alphas]
     return res
 
 
 def holonomic(t, speed_x, speed_y, omega, direction, params):
+    """
+    Hexapode holonomic movement, combining translation and rotation.
+    :return: the 18 motors angles asked at the time t.
+    """
+    # Initialisation des positions des 6 pattes
     allLegs = np.array([[0.0, 0.0, 0.0] for i in range(6)])
     res = []
-    if t < 1:
-        return legs(allLegs)
     for i in range(6):
-
+        # Calcul de la position cible pour la rotation
         angles = computeIKOriented(0, 0, 0, i + 1, params)
         # print("angles :", angles)
         O, A, B, C = computeDKDetailed(angles[0], angles[1], angles[2])
@@ -183,11 +216,14 @@ def holonomic(t, speed_x, speed_y, omega, direction, params):
              (0.5, np.array([rot[0], rot[1], 0])),
              (1, np.array([0, 0, 0]))]
 
+        # Calcul de la position cible pour la translation
         v2 = [(0, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]])),
              (0.25, np.array([allLegs[i][0] + 0.2 * speed_x, allLegs[i][1] + 0.2 * speed_y,
                               allLegs[i][2] + 0.05 * 3 * (abs(speed_x) + abs(speed_y))])),
              (0.5, np.array([allLegs[i][0] + 0.4 * speed_x, allLegs[i][1] + 0.4 * speed_y, allLegs[i][2]])),
              (1, np.array([allLegs[i][0], allLegs[i][1], allLegs[i][2]]))]
+
+        # Séparation des 6 patte en 2 groupes de 3 et moyenne des interpolations
         if i == 1 or i == 3 or i == 5:
             time = t % 1
         else:
@@ -195,37 +231,8 @@ def holonomic(t, speed_x, speed_y, omega, direction, params):
         x1, y1, z1 = interpolate(v1, time)
         x2, y2, z2 = interpolate(v2, time)
         x, y, z = (x1 + x2) / 2, (y1 + y2) / 2, (z1 + z2) / 2
+
+        # Cinématique inverse orienté
         alphas = computeIKOriented(x, y, z, i + 1, params)
         res += [alphas]
     return res
-
-
-def interpolate(values, t):
-    """
-    Interpolate the values at time t.
-
-    :param values: a list of values
-    :param t: a time
-    :return: the interpolated value
-    """
-    for i in range(len(values) - 1):
-        if values[i][0] <= t <= values[i + 1][0]:
-            return values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
-                    values[i + 1][0] - values[i][0])
-    if len(values) == 1:
-        return 0
-    else:
-        return np.array([0, 0, 0])
-
-
-def interpolate3D(values, t):
-    for i in range(len(values) - 1):
-        if values[i][0] <= t <= values[i + 1][0]:
-            x = values[i][1] + (t - values[i][0]) * (values[i + 1][1] - values[i][1]) / (
-                    values[i + 1][0] - values[i][0])
-            y = values[i][2] + (t - values[i][0]) * (values[i + 1][2] - values[i][2]) / (
-                    values[i + 1][0] - values[i][0])
-            z = values[i][3] + (t - values[i][0]) * (values[i + 1][3] - values[i][3]) / (
-                    values[i + 1][0] - values[i][0])
-
-    return np.array([0, 0, 0])

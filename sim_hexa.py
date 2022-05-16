@@ -74,8 +74,6 @@ sim = Simulation(robotPath, gui=True, panels=True, useUrdfInertia=False)
 pos, rpy = sim.getRobotPose()
 sim.setRobotPose([0, 0, 0.5], [0, 0, 0, 1])
 
-
-
 leg_center_pos = [0.1248, -0.06164, 0.001116 + 0.5]
 leg_angle = -math.pi / 4
 params = Parameters()
@@ -98,14 +96,14 @@ elif args.mode == "direct":
 elif args.mode == "inverse":
     cross = p.loadURDF("target2/robot.urdf")
     # Use your own DK function
-    alphas = kinematics.computeDK(0, 0, 0, use_rads=True)
+    alphas = kinematics.computeDK(0, 0, 0)
     # print(alphas)
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
     controls["target_z"] = p.addUserDebugParameter("target_z", -0.4, 0.4, alphas[2])
 
 elif args.mode == "arm":
-    alphas = kinematics.computeDK(0, 0, 0, use_rads=True)
+    alphas = kinematics.computeDK(0, 0, 0)
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
     controls["target_z"] = p.addUserDebugParameter("target_z", -0.4, 0.4, alphas[2])
@@ -132,17 +130,18 @@ elif args.mode == "holonomic":
     controls["omega"] = p.addUserDebugParameter("omega", -0.2, 0.2, omega)
 
 elif args.mode == "demonstration":
-    modes = {1:"inverse",2:"robot-ik",3:"robot-ik-keyboard",4:"walk", 5:"walk_key",6:"rotate",7:"holonomic", 8: "arm"}
+    modes = {1: "inverse", 2: "robot-ik", 3: "robot-ik-keyboard", 4: "walk", 5: "walk_key", 6: "rotate", 7: "holonomic",
+             8: "arm"}
     actual_mode = 0
     cross = p.loadURDF("target2/robot.urdf")
     # Use your own DK function
-    alphas = kinematics.computeDK(0, 0, 0, use_rads=True)
+    alphas = kinematics.computeDK(0, 0, 0)
     x_body, y_body, z_body = 0, 0, params.z
     max_value = 0.05
     value = 0.001
     speed_x, speed_y = 0, 0
     omega = 0
-    x_arm,y_arm,z_arm =0,0,0
+    x_arm, y_arm, z_arm = 0, 0, 0
 
     controls["target_x"] = p.addUserDebugParameter("target_x", -0.4, 0.4, alphas[0])
     controls["target_y"] = p.addUserDebugParameter("target_y", -0.4, 0.4, alphas[1])
@@ -150,8 +149,6 @@ elif args.mode == "demonstration":
     controls["speed_x"] = p.addUserDebugParameter("speed_x", -0.4, 0.4, speed_x)
     controls["speed_y"] = p.addUserDebugParameter("speed_y", -0.4, 0.4, speed_y)
     controls["omega"] = p.addUserDebugParameter("omega", -0.2, 0.2, omega)
-
-
 
 while True:
     targets = {}
@@ -165,8 +162,7 @@ while True:
         points = kinematics.computeDKDetailed(
             targets["j_c1_rf"],
             targets["j_thigh_rf"],
-            targets["j_tibia_rf"],
-            use_rads=True,
+            targets["j_tibia_rf"]
         )
         i = -1
         T = []
@@ -201,12 +197,11 @@ while True:
             args.mode = "demonstration"
             print("Choose a mode")
 
-
         x = p.readUserDebugParameter(controls["target_x"])
         y = p.readUserDebugParameter(controls["target_y"])
         z = p.readUserDebugParameter(controls["target_z"])
         # Use your own IK function
-        alphas = kinematics.computeIK(x, y, z, verbose=True, use_rads=True)
+        alphas = kinematics.computeIK(x, y, z)
 
         targets["j_c1_rf"] = alphas[0]
         targets["j_thigh_rf"] = alphas[1]
@@ -224,16 +219,14 @@ while True:
             cross, T, to_pybullet_quaternion(0, 0, leg_angle)
         )
 
-
     elif args.mode == "arm":
         keys = p.getKeyboardEvents()
         if 112 in keys:
             args.mode = "demonstration"
             print("Choose a mode")
-        
+
         value = 0.0005
-        max_x_value, max_y_value, max_z_value = 0.1, 0.1 ,0.3
-        
+        max_x_value, max_y_value, max_z_value = 0.1, 0.1, 0.3
         if 122 in keys:
             x_arm = min(x_arm + value, max_x_value)
         if 115 in keys:
@@ -257,9 +250,9 @@ while True:
 
         for leg_id in range(1, 7):
             if leg_id == 1:
-                alphas = kinematics.computeIKOriented(x_arm, y_arm, z_arm,leg_id, params)
-            else :
-                alphas = kinematics.computeIKOriented(0,0,0,leg_id, params)
+                alphas = kinematics.computeIKOriented(x_arm, y_arm, z_arm, leg_id, params)
+            else:
+                alphas = kinematics.computeIKOriented(0, 0, 0, leg_id, params)
             set_leg_angles(alphas, leg_id, targets, params)
         state = sim.setJoints(targets)
 
@@ -278,22 +271,9 @@ while True:
                 0.03 * math.sin(2 * math.pi * 0.2 * time.time()),
                 leg_id,
                 params,
-                verbose=True,
             )
             set_leg_angles(alphas, leg_id, targets, params)
         state = sim.setJoints(targets)
-
-        """n=2
-        diameter = 0.005
-        x = math.cos(2*math.pi*time.time()/n)
-        y = math.sin(2*math.pi*time.time()/n)
-
-        allLegs = [[x*diameter,y*diameter,0] for i in range(6)]
-        
-        angles = kinematics.legs(allLegs)
-        for leg_id in range(1, 7):
-            set_leg_angles(angles[leg_id-1], leg_id, targets, params)
-        state = sim.setJoints(targets)"""
 
     elif args.mode == "walk_key":
 
@@ -302,7 +282,7 @@ while True:
             args.mode = "demonstration"
             print("Choose a mode")
 
-        speed_x, speed_y= 0, 0
+        speed_x, speed_y = 0, 0
         keys = p.getKeyboardEvents()
         if 122 in keys:
             speed_x = 0.2
@@ -312,14 +292,14 @@ while True:
             speed_y = 0.2
         if 100 in keys:
             speed_y = -0.2
-        
+
         # print(time.time())
-        angles = kinematics.walk_guigui(time.time(), speed_x, speed_y, 0, params)
+        angles = kinematics.walk(time.time(), speed_x, speed_y, params)
         # print(angles)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
         state = sim.setJoints(targets)
-        
+
 
     elif args.mode == "walk":
 
@@ -331,7 +311,7 @@ while True:
         speed_x = p.readUserDebugParameter(controls["speed_x"])
         speed_y = p.readUserDebugParameter(controls["speed_y"])
         # print(time.time())
-        angles = kinematics.walk_guigui(time.time(), speed_x, speed_y, 0, params)
+        angles = kinematics.walk(time.time(), speed_x, speed_y, params)
         # print(angles)
         for leg_id in range(1, 7):
             set_leg_angles(angles[leg_id - 1], leg_id, targets, params)
@@ -405,7 +385,6 @@ while True:
             z_body = min(z_body + value, params.z + max_value)
         if 97 in keys:
             z_body = max(z_body - value, params.z - max_value)
-    
 
         for leg_id in range(1, 7):
             alphas = kinematics.computeIKOriented(
@@ -445,9 +424,9 @@ while True:
         if 95 in keys:
             args.mode = modes[8]
             print(modes[8])
-        
-        #print(actual_mode)
-        #print(modes)
+
+        # print(actual_mode)
+        # print(modes)
 
     sim.tick()
     time.sleep(0.001)
